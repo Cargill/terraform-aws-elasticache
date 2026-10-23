@@ -311,6 +311,30 @@ variable "cluster_mode_enabled" {
   default     = false
 }
 
+variable "replication_group_lifecycle_ignore_changes_mode" {
+  description = <<-EOT
+    Lifecycle ignore changes ownership mode for non-global replication group attributes. Valid
+    values are `managed`, `external_management`, `managed_credentials`,
+    `managed_engine_upgrade`, and
+    `managed_engine_upgrade_and_credentials`. This setting does not apply to
+    global replication groups.
+  EOT
+  type        = string
+  default     = "managed"
+
+  validation {
+    condition = contains([
+      "managed",
+      "external_management",
+      "managed_credentials",
+      "managed_engine_upgrade",
+      "managed_engine_upgrade_and_credentials",
+    ], var.replication_group_lifecycle_ignore_changes_mode)
+
+    error_message = "replication_group_lifecycle_ignore_changes_mode must be a supported lifecycle mode."
+  }
+}
+
 ################################################################################
 # Global Replication Group
 ################################################################################
@@ -359,6 +383,25 @@ variable "parameters" {
   description = "List of ElastiCache parameters to apply"
   type        = list(map(string))
   default     = []
+}
+
+variable "parameter_group_lifecycle_ignore_changes_mode" {
+  description = <<-EOT
+    Lifecycle ownership mode for a module-created parameter group's name. Valid
+    values are `managed` and `external_management`. This setting is independent
+    of `replication_group_lifecycle_ignore_changes_mode`.
+  EOT
+  type        = string
+  default     = "managed"
+
+  validation {
+    condition = contains([
+      "managed",
+      "external_management",
+    ], var.parameter_group_lifecycle_ignore_changes_mode)
+
+    error_message = "parameter_group_lifecycle_ignore_changes_mode must be a supported lifecycle mode."
+  }
 }
 
 ################################################################################

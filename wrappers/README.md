@@ -20,6 +20,8 @@ terraform {
 inputs = {
   defaults = { # Default values
     create = true
+    replication_group_lifecycle_ignore_changes_mode = "external_management"
+    parameter_group_lifecycle_ignore_changes_mode   = "external_management"
     tags = {
       Terraform   = "true"
       Environment = "dev"
@@ -46,6 +48,8 @@ module "wrapper" {
 
   defaults = { # Default values
     create = true
+    replication_group_lifecycle_ignore_changes_mode = "external_management"
+    parameter_group_lifecycle_ignore_changes_mode   = "external_management"
     tags = {
       Terraform   = "true"
       Environment = "dev"
