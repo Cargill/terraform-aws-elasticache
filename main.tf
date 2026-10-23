@@ -12,6 +12,17 @@ locals {
 # Cluster
 ################################################################################
 
+locals {
+  replication_group = try(
+    aws_elasticache_replication_group.this[0],
+    aws_elasticache_replication_group.this_external_management[0],
+    aws_elasticache_replication_group.this_managed_credentials[0],
+    aws_elasticache_replication_group.this_managed_engine_upgrade[0],
+    aws_elasticache_replication_group.this_managed_engine_upgrade_and_credentials[0],
+    null,
+  )
+}
+
 resource "aws_elasticache_cluster" "this" {
   count = var.create && var.create_cluster ? 1 : 0
 
@@ -46,7 +57,7 @@ resource "aws_elasticache_cluster" "this" {
   port                         = local.in_replication_group ? null : coalesce(var.port, local.port)
   preferred_availability_zones = var.preferred_availability_zones
   preferred_outpost_arn        = var.preferred_outpost_arn
-  replication_group_id         = var.create && var.create_replication_group ? aws_elasticache_replication_group.this[0].id : var.replication_group_id
+  replication_group_id         = var.create && var.create_replication_group ? local.replication_group.id : var.replication_group_id
   security_group_ids           = local.in_replication_group ? null : local.security_group_ids
   snapshot_arns                = local.in_replication_group ? null : var.snapshot_arns
   snapshot_name                = local.in_replication_group ? null : var.snapshot_name
@@ -74,7 +85,7 @@ locals {
 }
 
 resource "aws_elasticache_replication_group" "this" {
-  count = var.create && var.create_replication_group && !local.create_global_replication_group ? 1 : 0
+  count = var.create && var.create_replication_group && !local.create_global_replication_group && var.replication_group_lifecycle_ignore_changes_mode == "managed" ? 1 : 0
 
   apply_immediately           = var.apply_immediately
   at_rest_encryption_enabled  = var.at_rest_encryption_enabled
@@ -127,6 +138,292 @@ resource "aws_elasticache_replication_group" "this" {
   user_group_ids              = var.user_group_ids
 
   tags = local.tags
+}
+
+resource "aws_elasticache_replication_group" "this_external_management" {
+  count = var.create && var.create_replication_group && !local.create_global_replication_group && var.replication_group_lifecycle_ignore_changes_mode == "external_management" ? 1 : 0
+
+  apply_immediately           = var.apply_immediately
+  at_rest_encryption_enabled  = var.at_rest_encryption_enabled
+  auth_token                  = var.auth_token
+  auth_token_update_strategy  = var.auth_token_update_strategy
+  auto_minor_version_upgrade  = var.auto_minor_version_upgrade
+  automatic_failover_enabled  = var.multi_az_enabled || var.cluster_mode_enabled ? true : var.automatic_failover_enabled
+  cluster_mode                = var.cluster_mode
+  data_tiering_enabled        = var.data_tiering_enabled
+  description                 = coalesce(var.description, "Replication group")
+  engine                      = var.engine
+  engine_version              = var.engine_version
+  final_snapshot_identifier   = var.final_snapshot_identifier
+  global_replication_group_id = var.global_replication_group_id
+  ip_discovery                = var.ip_discovery
+  kms_key_id                  = var.at_rest_encryption_enabled ? var.kms_key_arn : null
+
+  dynamic "log_delivery_configuration" {
+    for_each = { for k, v in var.log_delivery_configuration : k => v if var.engine != "memcached" }
+
+    content {
+      destination      = try(log_delivery_configuration.value.create_cloudwatch_log_group, true) && log_delivery_configuration.value.destination_type == "cloudwatch-logs" ? aws_cloudwatch_log_group.this[log_delivery_configuration.key].name : log_delivery_configuration.value.destination
+      destination_type = log_delivery_configuration.value.destination_type
+      log_format       = log_delivery_configuration.value.log_format
+      log_type         = try(log_delivery_configuration.value.log_type, log_delivery_configuration.key)
+    }
+  }
+
+  maintenance_window          = var.maintenance_window
+  multi_az_enabled            = var.multi_az_enabled
+  network_type                = var.network_type
+  node_type                   = var.node_type
+  notification_topic_arn      = var.notification_topic_arn
+  num_cache_clusters          = var.cluster_mode_enabled ? null : var.num_cache_clusters
+  num_node_groups             = local.num_node_groups
+  parameter_group_name        = local.parameter_group_name_result
+  port                        = coalesce(var.port, local.port)
+  preferred_cache_cluster_azs = var.preferred_cache_cluster_azs
+  replicas_per_node_group     = var.replicas_per_node_group
+  replication_group_id        = var.replication_group_id
+  security_group_names        = var.security_group_names
+  security_group_ids          = local.security_group_ids
+  snapshot_arns               = var.snapshot_arns
+  snapshot_name               = var.snapshot_name
+  snapshot_retention_limit    = var.snapshot_retention_limit
+  snapshot_window             = var.snapshot_window
+  subnet_group_name           = local.subnet_group_name
+  transit_encryption_enabled  = var.transit_encryption_enabled
+  transit_encryption_mode     = var.transit_encryption_mode
+  user_group_ids              = var.user_group_ids
+
+  tags = local.tags
+  lifecycle {
+    ignore_changes = [
+      subnet_group_name,
+      node_type,
+      num_cache_clusters,
+      automatic_failover_enabled,
+      snapshot_retention_limit,
+      engine_version,
+      parameter_group_name,
+      member_clusters,
+      configuration_endpoint_address,
+      auth_token,
+      id,
+      primary_endpoint_address,
+      security_group_names
+    ]
+  }
+}
+
+resource "aws_elasticache_replication_group" "this_managed_credentials" {
+  count = var.create && var.create_replication_group && !local.create_global_replication_group && var.replication_group_lifecycle_ignore_changes_mode == "managed_credentials" ? 1 : 0
+
+  apply_immediately           = var.apply_immediately
+  at_rest_encryption_enabled  = var.at_rest_encryption_enabled
+  auth_token                  = var.auth_token
+  auth_token_update_strategy  = var.auth_token_update_strategy
+  auto_minor_version_upgrade  = var.auto_minor_version_upgrade
+  automatic_failover_enabled  = var.multi_az_enabled || var.cluster_mode_enabled ? true : var.automatic_failover_enabled
+  cluster_mode                = var.cluster_mode
+  data_tiering_enabled        = var.data_tiering_enabled
+  description                 = coalesce(var.description, "Replication group")
+  engine                      = var.engine
+  engine_version              = var.engine_version
+  final_snapshot_identifier   = var.final_snapshot_identifier
+  global_replication_group_id = var.global_replication_group_id
+  ip_discovery                = var.ip_discovery
+  kms_key_id                  = var.at_rest_encryption_enabled ? var.kms_key_arn : null
+
+  dynamic "log_delivery_configuration" {
+    for_each = { for k, v in var.log_delivery_configuration : k => v if var.engine != "memcached" }
+
+    content {
+      destination      = try(log_delivery_configuration.value.create_cloudwatch_log_group, true) && log_delivery_configuration.value.destination_type == "cloudwatch-logs" ? aws_cloudwatch_log_group.this[log_delivery_configuration.key].name : log_delivery_configuration.value.destination
+      destination_type = log_delivery_configuration.value.destination_type
+      log_format       = log_delivery_configuration.value.log_format
+      log_type         = try(log_delivery_configuration.value.log_type, log_delivery_configuration.key)
+    }
+  }
+
+  maintenance_window          = var.maintenance_window
+  multi_az_enabled            = var.multi_az_enabled
+  network_type                = var.network_type
+  node_type                   = var.node_type
+  notification_topic_arn      = var.notification_topic_arn
+  num_cache_clusters          = var.cluster_mode_enabled ? null : var.num_cache_clusters
+  num_node_groups             = local.num_node_groups
+  parameter_group_name        = local.parameter_group_name_result
+  port                        = coalesce(var.port, local.port)
+  preferred_cache_cluster_azs = var.preferred_cache_cluster_azs
+  replicas_per_node_group     = var.replicas_per_node_group
+  replication_group_id        = var.replication_group_id
+  security_group_names        = var.security_group_names
+  security_group_ids          = local.security_group_ids
+  snapshot_arns               = var.snapshot_arns
+  snapshot_name               = var.snapshot_name
+  snapshot_retention_limit    = var.snapshot_retention_limit
+  snapshot_window             = var.snapshot_window
+  subnet_group_name           = local.subnet_group_name
+  transit_encryption_enabled  = var.transit_encryption_enabled
+  transit_encryption_mode     = var.transit_encryption_mode
+  user_group_ids              = var.user_group_ids
+
+  tags = local.tags
+  lifecycle {
+    ignore_changes = [
+      subnet_group_name,
+      node_type,
+      num_cache_clusters,
+      automatic_failover_enabled,
+      snapshot_retention_limit,
+      engine_version,
+      parameter_group_name,
+      member_clusters,
+      configuration_endpoint_address,
+      id,
+      primary_endpoint_address,
+      security_group_names
+    ]
+  }
+}
+
+resource "aws_elasticache_replication_group" "this_managed_engine_upgrade" {
+  count = var.create && var.create_replication_group && !local.create_global_replication_group && var.replication_group_lifecycle_ignore_changes_mode == "managed_engine_upgrade" ? 1 : 0
+
+  apply_immediately           = var.apply_immediately
+  at_rest_encryption_enabled  = var.at_rest_encryption_enabled
+  auth_token                  = var.auth_token
+  auth_token_update_strategy  = var.auth_token_update_strategy
+  auto_minor_version_upgrade  = var.auto_minor_version_upgrade
+  automatic_failover_enabled  = var.multi_az_enabled || var.cluster_mode_enabled ? true : var.automatic_failover_enabled
+  cluster_mode                = var.cluster_mode
+  data_tiering_enabled        = var.data_tiering_enabled
+  description                 = coalesce(var.description, "Replication group")
+  engine                      = var.engine
+  engine_version              = var.engine_version
+  final_snapshot_identifier   = var.final_snapshot_identifier
+  global_replication_group_id = var.global_replication_group_id
+  ip_discovery                = var.ip_discovery
+  kms_key_id                  = var.at_rest_encryption_enabled ? var.kms_key_arn : null
+
+  dynamic "log_delivery_configuration" {
+    for_each = { for k, v in var.log_delivery_configuration : k => v if var.engine != "memcached" }
+
+    content {
+      destination      = try(log_delivery_configuration.value.create_cloudwatch_log_group, true) && log_delivery_configuration.value.destination_type == "cloudwatch-logs" ? aws_cloudwatch_log_group.this[log_delivery_configuration.key].name : log_delivery_configuration.value.destination
+      destination_type = log_delivery_configuration.value.destination_type
+      log_format       = log_delivery_configuration.value.log_format
+      log_type         = try(log_delivery_configuration.value.log_type, log_delivery_configuration.key)
+    }
+  }
+
+  maintenance_window          = var.maintenance_window
+  multi_az_enabled            = var.multi_az_enabled
+  network_type                = var.network_type
+  node_type                   = var.node_type
+  notification_topic_arn      = var.notification_topic_arn
+  num_cache_clusters          = var.cluster_mode_enabled ? null : var.num_cache_clusters
+  num_node_groups             = local.num_node_groups
+  parameter_group_name        = local.parameter_group_name_result
+  port                        = coalesce(var.port, local.port)
+  preferred_cache_cluster_azs = var.preferred_cache_cluster_azs
+  replicas_per_node_group     = var.replicas_per_node_group
+  replication_group_id        = var.replication_group_id
+  security_group_names        = var.security_group_names
+  security_group_ids          = local.security_group_ids
+  snapshot_arns               = var.snapshot_arns
+  snapshot_name               = var.snapshot_name
+  snapshot_retention_limit    = var.snapshot_retention_limit
+  snapshot_window             = var.snapshot_window
+  subnet_group_name           = local.subnet_group_name
+  transit_encryption_enabled  = var.transit_encryption_enabled
+  transit_encryption_mode     = var.transit_encryption_mode
+  user_group_ids              = var.user_group_ids
+
+  tags = local.tags
+  lifecycle {
+    ignore_changes = [
+      subnet_group_name,
+      node_type,
+      num_cache_clusters,
+      automatic_failover_enabled,
+      snapshot_retention_limit,
+      member_clusters,
+      configuration_endpoint_address,
+      auth_token,
+      id,
+      primary_endpoint_address,
+      security_group_names
+    ]
+  }
+}
+
+resource "aws_elasticache_replication_group" "this_managed_engine_upgrade_and_credentials" {
+  count = var.create && var.create_replication_group && !local.create_global_replication_group && var.replication_group_lifecycle_ignore_changes_mode == "managed_engine_upgrade_and_credentials" ? 1 : 0
+
+  apply_immediately           = var.apply_immediately
+  at_rest_encryption_enabled  = var.at_rest_encryption_enabled
+  auth_token                  = var.auth_token
+  auth_token_update_strategy  = var.auth_token_update_strategy
+  auto_minor_version_upgrade  = var.auto_minor_version_upgrade
+  automatic_failover_enabled  = var.multi_az_enabled || var.cluster_mode_enabled ? true : var.automatic_failover_enabled
+  cluster_mode                = var.cluster_mode
+  data_tiering_enabled        = var.data_tiering_enabled
+  description                 = coalesce(var.description, "Replication group")
+  engine                      = var.engine
+  engine_version              = var.engine_version
+  final_snapshot_identifier   = var.final_snapshot_identifier
+  global_replication_group_id = var.global_replication_group_id
+  ip_discovery                = var.ip_discovery
+  kms_key_id                  = var.at_rest_encryption_enabled ? var.kms_key_arn : null
+
+  dynamic "log_delivery_configuration" {
+    for_each = { for k, v in var.log_delivery_configuration : k => v if var.engine != "memcached" }
+
+    content {
+      destination      = try(log_delivery_configuration.value.create_cloudwatch_log_group, true) && log_delivery_configuration.value.destination_type == "cloudwatch-logs" ? aws_cloudwatch_log_group.this[log_delivery_configuration.key].name : log_delivery_configuration.value.destination
+      destination_type = log_delivery_configuration.value.destination_type
+      log_format       = log_delivery_configuration.value.log_format
+      log_type         = try(log_delivery_configuration.value.log_type, log_delivery_configuration.key)
+    }
+  }
+
+  maintenance_window          = var.maintenance_window
+  multi_az_enabled            = var.multi_az_enabled
+  network_type                = var.network_type
+  node_type                   = var.node_type
+  notification_topic_arn      = var.notification_topic_arn
+  num_cache_clusters          = var.cluster_mode_enabled ? null : var.num_cache_clusters
+  num_node_groups             = local.num_node_groups
+  parameter_group_name        = local.parameter_group_name_result
+  port                        = coalesce(var.port, local.port)
+  preferred_cache_cluster_azs = var.preferred_cache_cluster_azs
+  replicas_per_node_group     = var.replicas_per_node_group
+  replication_group_id        = var.replication_group_id
+  security_group_names        = var.security_group_names
+  security_group_ids          = local.security_group_ids
+  snapshot_arns               = var.snapshot_arns
+  snapshot_name               = var.snapshot_name
+  snapshot_retention_limit    = var.snapshot_retention_limit
+  snapshot_window             = var.snapshot_window
+  subnet_group_name           = local.subnet_group_name
+  transit_encryption_enabled  = var.transit_encryption_enabled
+  transit_encryption_mode     = var.transit_encryption_mode
+  user_group_ids              = var.user_group_ids
+
+  tags = local.tags
+  lifecycle {
+    ignore_changes = [
+      subnet_group_name,
+      node_type,
+      num_cache_clusters,
+      automatic_failover_enabled,
+      snapshot_retention_limit,
+      member_clusters,
+      configuration_endpoint_address,
+      id,
+      primary_endpoint_address,
+      security_group_names
+    ]
+  }
 }
 
 ################################################################################

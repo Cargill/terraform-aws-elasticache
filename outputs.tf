@@ -33,42 +33,42 @@ output "cluster_configuration_endpoint" {
 
 output "replication_group_arn" {
   description = "ARN of the created ElastiCache Replication Group"
-  value       = try(aws_elasticache_replication_group.this[0].arn, aws_elasticache_replication_group.global[0].arn, null)
+  value       = try(local.replication_group.arn, aws_elasticache_replication_group.global[0].arn, null)
 }
 
 output "replication_group_engine_version_actual" {
   description = "Because ElastiCache pulls the latest minor or patch for a version, this attribute returns the running version of the cache engine"
-  value       = try(aws_elasticache_replication_group.this[0].engine_version_actual, aws_elasticache_replication_group.global[0].engine_version_actual, null)
+  value       = try(local.replication_group.engine_version_actual, aws_elasticache_replication_group.global[0].engine_version_actual, null)
 }
 
 output "replication_group_configuration_endpoint_address" {
   description = "Address of the replication group configuration endpoint when cluster mode is enabled"
-  value       = try(aws_elasticache_replication_group.this[0].configuration_endpoint_address, aws_elasticache_replication_group.global[0].configuration_endpoint_address, null)
+  value       = try(local.replication_group.configuration_endpoint_address, aws_elasticache_replication_group.global[0].configuration_endpoint_address, null)
 }
 
 output "replication_group_id" {
   description = "ID of the ElastiCache Replication Group"
-  value       = try(aws_elasticache_replication_group.this[0].id, aws_elasticache_replication_group.global[0].id, null)
+  value       = try(local.replication_group.id, aws_elasticache_replication_group.global[0].id, null)
 }
 
 output "replication_group_member_clusters" {
   description = "Identifiers of all the nodes that are part of this replication group"
-  value       = try(aws_elasticache_replication_group.this[0].member_clusters, aws_elasticache_replication_group.global[0].member_clusters, null)
+  value       = try(local.replication_group.member_clusters, aws_elasticache_replication_group.global[0].member_clusters, null)
 }
 
 output "replication_group_primary_endpoint_address" {
   description = "Address of the endpoint for the primary node in the replication group, if the cluster mode is disabled"
-  value       = try(aws_elasticache_replication_group.this[0].primary_endpoint_address, aws_elasticache_replication_group.global[0].primary_endpoint_address, null)
+  value       = try(local.replication_group.primary_endpoint_address, aws_elasticache_replication_group.global[0].primary_endpoint_address, null)
 }
 
 output "replication_group_port" {
   description = "Port of the primary node in the replication group, if the cluster mode is disabled"
-  value       = try(aws_elasticache_replication_group.this[0].port, aws_elasticache_replication_group.global[0].port, null)
+  value       = try(local.replication_group.port, aws_elasticache_replication_group.global[0].port, null)
 }
 
 output "replication_group_reader_endpoint_address" {
   description = "Address of the endpoint for the reader node in the replication group, if the cluster mode is disabled"
-  value       = try(aws_elasticache_replication_group.this[0].reader_endpoint_address, aws_elasticache_replication_group.global[0].reader_endpoint_address, null)
+  value       = try(local.replication_group.reader_endpoint_address, aws_elasticache_replication_group.global[0].reader_endpoint_address, null)
 }
 
 ################################################################################

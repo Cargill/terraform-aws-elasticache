@@ -311,6 +311,29 @@ variable "cluster_mode_enabled" {
   default     = false
 }
 
+variable "replication_group_lifecycle_ignore_changes_mode" {
+  description = <<-EOT
+    Lifecycle ignore changes ownership mode for replication group attributes. Valid values are
+    `managed`, `external_management`, `managed_credentials`,
+    `managed_engine_upgrade`, and
+    `managed_engine_upgrade_and_credentials`.
+  EOT
+  type        = string
+  default     = "managed"
+
+  validation {
+    condition = contains([
+      "managed",
+      "external_management",
+      "managed_credentials",
+      "managed_engine_upgrade",
+      "managed_engine_upgrade_and_credentials",
+    ], var.replication_group_lifecycle_ignore_changes_mode)
+
+    error_message = "replication_group_lifecycle_ignore_changes_mode must be a supported lifecycle mode."
+  }
+}
+
 ################################################################################
 # Global Replication Group
 ################################################################################
