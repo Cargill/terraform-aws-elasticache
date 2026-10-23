@@ -538,15 +538,22 @@ resource "random_id" "this" {
 }
 
 locals {
-  inter_parameter_group_name  = "${try(coalesce(var.cluster_id, var.replication_group_id), "")}-${replace(var.parameter_group_family, ".", "-")}-${try(random_id.this[0].hex, "")}"
-  parameter_group_name        = coalesce(var.parameter_group_name, local.inter_parameter_group_name)
-  parameter_group_name_result = var.create && var.create_parameter_group ? aws_elasticache_parameter_group.this[0].id : var.parameter_group_name
+  inter_parameter_group_name = "${try(coalesce(var.cluster_id, var.replication_group_id), "")}-${replace(var.parameter_group_family, ".", "-")}-${try(random_id.this[0].hex, "")}"
+  parameter_group_name       = coalesce(var.parameter_group_name, local.inter_parameter_group_name)
+
+  parameter_group = try(
+    aws_elasticache_parameter_group.this[0],
+    aws_elasticache_parameter_group.this_external_management[0],
+    null,
+  )
+
+  parameter_group_name_result = var.create && var.create_parameter_group ? local.parameter_group.id : var.parameter_group_name
 
   parameters = var.cluster_mode_enabled ? concat([{ name = "cluster-enabled", value = "yes" }], var.parameters) : var.parameters
 }
 
 resource "aws_elasticache_parameter_group" "this" {
-  count = var.create && var.create_parameter_group ? 1 : 0
+  count = var.create && var.create_parameter_group && var.parameter_group_lifecycle_ignore_changes_mode == "managed" ? 1 : 0
 
   description = coalesce(var.parameter_group_description, "ElastiCache parameter group")
   family      = var.parameter_group_family
@@ -564,6 +571,32 @@ resource "aws_elasticache_parameter_group" "this" {
   tags = local.tags
 
   lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_elasticache_parameter_group" "this_external_management" {
+  count = var.create && var.create_parameter_group && var.parameter_group_lifecycle_ignore_changes_mode == "external_management" ? 1 : 0
+
+  description = coalesce(var.parameter_group_description, "ElastiCache parameter group")
+  family      = var.parameter_group_family
+  name        = local.parameter_group_name
+
+  dynamic "parameter" {
+    for_each = local.parameters
+
+    content {
+      name  = parameter.value.name
+      value = parameter.value.value
+    }
+  }
+
+  tags = local.tags
+
+  lifecycle {
+    ignore_changes = [
+      name
+    ]
     create_before_destroy = true
   }
 }

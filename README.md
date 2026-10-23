@@ -348,7 +348,7 @@ module "elasticache" {
 }
 ```
 
-## Replication Group Lifecycle Management
+## Lifecycle Management
 
 By default, `replication_group_lifecycle_ignore_changes_mode = "managed"` and
 Terraform manages all configured replication group attributes. Select another
@@ -364,6 +364,22 @@ their existing lifecycle behavior.
 | `managed_engine_upgrade` | `engine_version`, `parameter_group_name` | `auth_token`, `automatic_failover_enabled`, `node_type`, `num_cache_clusters`, `snapshot_retention_limit`, `subnet_group_name`, `security_group_names` |
 | `managed_engine_upgrade_and_credentials` | `auth_token`, `engine_version`, `parameter_group_name` | `automatic_failover_enabled`, `node_type`, `num_cache_clusters`, `snapshot_retention_limit`, `subnet_group_name`, `security_group_names` |
 
+`parameter_group_lifecycle_ignore_changes_mode` separately controls Terraform
+ownership of `name` on a parameter group created by this module. It is
+independent of the replication group mode, so callers must select compatible
+values for their deployment workflow.
+
+| Parameter Group Mode | Terraform-managed attributes | Ignored attributes |
+| -------------------- | ---------------------------- | ------------------ |
+| `managed` | `name` and all other configured parameter group attributes | None |
+| `external_management` | All configured parameter group attributes except `name` | `name` |
+
+For a Captain-compatible configuration, use
+`parameter_group_lifecycle_ignore_changes_mode = "external_management"` when
+Redis/Valkey upgrades are managed outside Terraform. Use `managed` when
+Terraform manages those upgrades and is permitted to replace the parameter
+group when its name changes.
+
 For example, to retain out-of-band changes made by an operational workflow:
 
 ```hcl
@@ -375,6 +391,7 @@ module "elasticache" {
   node_type            = "cache.r7g.large"
 
   replication_group_lifecycle_ignore_changes_mode = "external_management"
+  parameter_group_lifecycle_ignore_changes_mode   = "external_management"
 }
 ```
 
@@ -383,7 +400,7 @@ engine upgrade but does not plan to reconcile `engine_version` or the other
 ignored attributes. Ignored attributes are intentionally not managed by
 Terraform until a mode that manages them is selected.
 
-### Changing Lifecycle Mode
+### Changing Lifecycle Modes
 
 Choose a lifecycle mode before initially creating a replication group whenever
 possible. Changing the mode of an existing normal replication group changes its
@@ -408,6 +425,16 @@ Resource addresses for the other modes are:
 | `managed_credentials` | `aws_elasticache_replication_group.this_managed_credentials[0]` |
 | `managed_engine_upgrade` | `aws_elasticache_replication_group.this_managed_engine_upgrade[0]` |
 | `managed_engine_upgrade_and_credentials` | `aws_elasticache_replication_group.this_managed_engine_upgrade_and_credentials[0]` |
+
+Changing `parameter_group_lifecycle_ignore_changes_mode` also changes the
+module-created parameter group's Terraform resource address. For example, to
+change from `managed` to `external_management`:
+
+```bash
+terraform state mv \
+  'aws_elasticache_parameter_group.this[0]' \
+  'aws_elasticache_parameter_group.this_external_management[0]'
+```
 
 ## Examples
 

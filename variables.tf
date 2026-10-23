@@ -385,6 +385,25 @@ variable "parameters" {
   default     = []
 }
 
+variable "parameter_group_lifecycle_ignore_changes_mode" {
+  description = <<-EOT
+    Lifecycle ownership mode for a module-created parameter group's name. Valid
+    values are `managed` and `external_management`. This setting is independent
+    of `replication_group_lifecycle_ignore_changes_mode`.
+  EOT
+  type        = string
+  default     = "managed"
+
+  validation {
+    condition = contains([
+      "managed",
+      "external_management",
+    ], var.parameter_group_lifecycle_ignore_changes_mode)
+
+    error_message = "parameter_group_lifecycle_ignore_changes_mode must be a supported lifecycle mode."
+  }
+}
+
 ################################################################################
 # Subnet Group
 ################################################################################

@@ -22,6 +22,7 @@ module "elasticache" {
   # An external workflow owns engine upgrades, credential rotation, and
   # selected operational attributes after initial creation.
   replication_group_lifecycle_ignore_changes_mode = "external_management"
+  parameter_group_lifecycle_ignore_changes_mode   = "external_management"
 
   transit_encryption_enabled = true
   auth_token                 = "PickSomethingMoreSecure123!"

@@ -1,7 +1,8 @@
 # ElastiCache Example For Redis Replication Group External Management
 
 This example creates a Redis replication group with
-`replication_group_lifecycle_ignore_changes_mode = "external_management"`.
+`replication_group_lifecycle_ignore_changes_mode = "external_management"` and
+`parameter_group_lifecycle_ignore_changes_mode = "external_management"`.
 
 An external operational workflow can update the engine version, parameter
 group, credentials, and selected capacity or network attributes after creation.

@@ -122,12 +122,12 @@ output "cloudwatch_log_group_arn" {
 
 output "parameter_group_arn" {
   description = "The AWS ARN associated with the parameter group"
-  value       = try(aws_elasticache_parameter_group.this[0].arn, null)
+  value       = try(local.parameter_group.arn, null)
 }
 
 output "parameter_group_id" {
   description = "The ElastiCache parameter group name"
-  value       = try(aws_elasticache_parameter_group.this[0].id, null)
+  value       = try(local.parameter_group.id, null)
 }
 
 ################################################################################

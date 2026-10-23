@@ -48,6 +48,7 @@ module "wrapper" {
   outpost_mode                                    = try(each.value.outpost_mode, var.defaults.outpost_mode, null)
   parameter_group_description                     = try(each.value.parameter_group_description, var.defaults.parameter_group_description, null)
   parameter_group_family                          = try(each.value.parameter_group_family, var.defaults.parameter_group_family, "")
+  parameter_group_lifecycle_ignore_changes_mode   = try(each.value.parameter_group_lifecycle_ignore_changes_mode, var.defaults.parameter_group_lifecycle_ignore_changes_mode, "managed")
   parameter_group_name                            = try(each.value.parameter_group_name, var.defaults.parameter_group_name, null)
   parameters                                      = try(each.value.parameters, var.defaults.parameters, [])
   port                                            = try(each.value.port, var.defaults.port, null)
