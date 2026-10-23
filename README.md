@@ -348,6 +348,67 @@ module "elasticache" {
 }
 ```
 
+## Replication Group Lifecycle Management
+
+By default, `replication_group_lifecycle_ignore_changes_mode = "managed"` and
+Terraform manages all configured replication group attributes. Select another
+mode only when the listed attributes are managed outside Terraform. This option
+applies to normal replication groups only; global replication groups retain
+their existing lifecycle behavior.
+
+| Mode | Terraform-managed attributes | Ignored attributes |
+| ---- | ---------------------------- | ------------------ |
+| `managed` | All configured attributes | None |
+| `external_management` | None of credential rotation, engine upgrades, or parameter group changes | `auth_token`, `automatic_failover_enabled`, `engine_version`, `node_type`, `num_cache_clusters`, `parameter_group_name`, `snapshot_retention_limit`, `subnet_group_name`, `security_group_names` |
+| `managed_credentials` | `auth_token` | `automatic_failover_enabled`, `engine_version`, `node_type`, `num_cache_clusters`, `parameter_group_name`, `snapshot_retention_limit`, `subnet_group_name`, `security_group_names` |
+| `managed_engine_upgrade` | `engine_version`, `parameter_group_name` | `auth_token`, `automatic_failover_enabled`, `node_type`, `num_cache_clusters`, `snapshot_retention_limit`, `subnet_group_name`, `security_group_names` |
+| `managed_engine_upgrade_and_credentials` | `auth_token`, `engine_version`, `parameter_group_name` | `automatic_failover_enabled`, `node_type`, `num_cache_clusters`, `snapshot_retention_limit`, `subnet_group_name`, `security_group_names` |
+
+For example, to retain out-of-band changes made by an operational workflow:
+
+```hcl
+module "elasticache" {
+  source = "terraform-aws-modules/elasticache/aws"
+
+  replication_group_id = "orders-cache"
+  engine_version       = "8.0"
+  node_type            = "cache.r7g.large"
+
+  replication_group_lifecycle_ignore_changes_mode = "external_management"
+}
+```
+
+With `external_management`, Terraform refreshes state with an out-of-band
+engine upgrade but does not plan to reconcile `engine_version` or the other
+ignored attributes. Ignored attributes are intentionally not managed by
+Terraform until a mode that manages them is selected.
+
+### Changing Lifecycle Mode
+
+Choose a lifecycle mode before initially creating a replication group whenever
+possible. Changing the mode of an existing normal replication group changes its
+Terraform resource address. Move state to the resource for the target mode
+before applying the configuration change, otherwise Terraform may propose a
+replacement.
+
+For example, to change from the default mode to `external_management`:
+
+```bash
+terraform state mv \
+  'aws_elasticache_replication_group.this[0]' \
+  'aws_elasticache_replication_group.this_external_management[0]'
+```
+
+Resource addresses for the other modes are:
+
+| Mode | Resource address |
+| ---- | ---------------- |
+| `managed` | `aws_elasticache_replication_group.this[0]` |
+| `external_management` | `aws_elasticache_replication_group.this_external_management[0]` |
+| `managed_credentials` | `aws_elasticache_replication_group.this_managed_credentials[0]` |
+| `managed_engine_upgrade` | `aws_elasticache_replication_group.this_managed_engine_upgrade[0]` |
+| `managed_engine_upgrade_and_credentials` | `aws_elasticache_replication_group.this_managed_engine_upgrade_and_credentials[0]` |
+
 ## Examples
 
 Examples codified under the [`examples`](https://github.com/terraform-aws-modules/terraform-aws-elasticache/tree/master/examples) are intended to give users references for how to use the module(s) as well as testing/validating changes to the source code of the module. If contributing to the project, please be sure to make any appropriate updates to the relevant examples to allow maintainers to test your changes and to keep the examples up to date for users. Thank you!
@@ -357,6 +418,7 @@ Examples codified under the [`examples`](https://github.com/terraform-aws-module
 - [Redis Cluster Mode](https://github.com/terraform-aws-modules/terraform-aws-elasticache/tree/master/examples/redis-cluster-mode)
 - [Redis Global Replication Group](https://github.com/terraform-aws-modules/terraform-aws-elasticache/tree/master/examples/redis-global-replication-group)
 - [Redis Replication Group](https://github.com/terraform-aws-modules/terraform-aws-elasticache/tree/master/examples/redis-replication-group)
+- [Redis Replication Group With External Management](https://github.com/terraform-aws-modules/terraform-aws-elasticache/tree/master/examples/redis-replication-group-external-management)
 - [Serverless Cache](https://github.com/terraform-aws-modules/terraform-aws-elasticache/tree/master/examples/serverless-cache)
 - [Valkey Replication Group](https://github.com/terraform-aws-modules/terraform-aws-elasticache/tree/master/examples/valkey-replication-group)
 

@@ -313,10 +313,11 @@ variable "cluster_mode_enabled" {
 
 variable "replication_group_lifecycle_ignore_changes_mode" {
   description = <<-EOT
-    Lifecycle ignore changes ownership mode for replication group attributes. Valid values are
-    `managed`, `external_management`, `managed_credentials`,
+    Lifecycle ignore changes ownership mode for non-global replication group attributes. Valid
+    values are `managed`, `external_management`, `managed_credentials`,
     `managed_engine_upgrade`, and
-    `managed_engine_upgrade_and_credentials`.
+    `managed_engine_upgrade_and_credentials`. This setting does not apply to
+    global replication groups.
   EOT
   type        = string
   default     = "managed"
